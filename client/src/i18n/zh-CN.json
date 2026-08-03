@@ -1,0 +1,25 @@
+{
+  "appTitle": "Tibo今天说了啥？",
+  "tiboTitle": "Tibo：OpenAI首席重置官",
+  "switchLang": "English",
+  "todayTweets": "今日发言",
+  "tweetCount": "今日发言次数",
+  "loading": "加载中...",
+  "retry": "重试",
+  "noTweets": "Tibo今天还没有发言，世界暂时安全。",
+  "resetAnalysis": "重置可能性判断",
+  "likelihood": {
+    "very_likely": "极有可能",
+    "likely": "有可能",
+    "unlikely": "不太可能",
+    "none": "不会重置",
+    "unknown": "无法判断"
+  },
+  "keywords": "关键词",
+  "summary": "总结",
+  "reason": "分析说明",
+  "analyzing": "AI分析中...",
+  "analyzeError": "分析失败，请重试",
+  "fetchError": "获取数据失败",
+  "source": "数据来源"
+}

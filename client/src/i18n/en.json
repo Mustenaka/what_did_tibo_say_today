@@ -1,0 +1,25 @@
+{
+  "appTitle": "What did Tibo say today?",
+  "tiboTitle": "Tibo: OpenAI Chief Reset Officer",
+  "switchLang": "中文",
+  "todayTweets": "Today's Tweets",
+  "tweetCount": "Today's Tweet Count",
+  "loading": "Loading...",
+  "retry": "Retry",
+  "noTweets": "Tibo hasn't said anything today. The world is safe for now.",
+  "resetAnalysis": "Reset Likelihood Analysis",
+  "likelihood": {
+    "very_likely": "Very Likely",
+    "likely": "Likely",
+    "unlikely": "Unlikely",
+    "none": "Not Happening",
+    "unknown": "Unknown"
+  },
+  "keywords": "Keywords",
+  "summary": "Summary",
+  "reason": "Analysis",
+  "analyzing": "AI analyzing...",
+  "analyzeError": "Analysis failed, please retry",
+  "fetchError": "Failed to fetch data",
+  "source": "Source"
+}
