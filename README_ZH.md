@@ -30,6 +30,8 @@ Tibo 的重置公告并不存在于一份整洁的官方日志里，它们散落
 - 展示每日活动节奏和互动类型构成。
 - 使用 DeepSeek 分析 Codex / ChatGPT Work 重置信号。
 - 概率分析从最近一次已确认全局重置之后开始，不再反复使用完整 7 天信息。
+- 分析输入完全由服务端 D1 提供并保存可回溯快照；访客不能提交任意模型内容，证据不变时也不会重复消耗 DeepSeek 请求。
+- 展示“自上次分析发生了什么变化”，并提供只保存在当前浏览器的个人额度重置倒计时。
 - 提供带有“已执行”和“传播中”状态的可核实重置历史。
 - 使用 Sites D1 幂等保存活动、重置事件和抓取健康记录。
 - FxTwitter API v2 作为主数据源，Nitter RSS 作为降级来源。
@@ -57,7 +59,8 @@ flowchart LR
     H --> API
     API --> UI["React 仪表盘"]
     A --> DS["DeepSeek 分析"]
-    DS --> UI
+    DS --> S["D1 · analysis_snapshots"]
+    S --> UI
 ```
 
 | 层级 | 技术 |
@@ -101,6 +104,7 @@ OpenAI 的 Codex App Server 可以通过 `account/rateLimits/read` 返回已登�
 | `activities` | 以 X status ID 为主键的标准化活动，包含类型、互动对象、来源和发布时间。 |
 | `fetch_runs` | 保存抓取来源、条数、成功状态和诊断错误。 |
 | `reset_events` | 持久保存状态、类型、覆盖对象、证据文本和来源链接。 |
+| `analysis_snapshots` | 保存输入指纹、模型/提示词版本、上下文、结果、前后变化和后续真实重置结果。 |
 
 由于产品主要展示 7 天窗口，超过 30 天的普通活动可以被清理；重置事件存放在独立表中，不受普通活动清理规则影响。
 
@@ -124,6 +128,7 @@ FXTWITTER_BASE_URL=https://api.fxtwitter.com
 X_HANDLE=thsottiaux
 NITTER_INSTANCES=https://nitter.net,https://nitter.poast.org,https://nitter.privacyredirect.com
 REFRESH_TTL_SECONDS=600
+REFRESH_SECRET=replace_with_a_long_random_value
 ```
 
 FxTwitter 不需要 X 登录、Cookie、OAuth 或项目 API Key。公共 Nitter 实例可靠性较低，只作为尽力而为的降级来源。不要提交真实密钥。
@@ -154,8 +159,9 @@ npm run db:generate
 | 端点 | 方法 | 说明 |
 | --- | --- | --- |
 | `/api/activities/recent` | `GET` | 按缓存策略刷新数据源、写入 D1，并返回活动、7 天统计、覆盖范围和最近重置历史。 |
-| `/api/activities/recent?refresh=1` | `GET` | 请求绕过常规新鲜度窗口进行刷新。 |
-| `/api/analyze` | `POST` | 分析传入的非转推 Tibo 活动是否包含重置信号。 |
+| `/api/activities/recent?refresh=1` | `GET` | 只有携带授权 Bearer Token 时才会强制刷新；普通访客会收到 `403`。 |
+| `/api/analyze` | `GET` | 从服务端 D1 读取活动，复用或生成可审计分析快照，并返回相对上一快照的变化。 |
+| `/api/refresh` | `POST` | 可接入外部定时器的刷新入口，使用 `Authorization: Bearer $REFRESH_SECRET` 保护。 |
 
 简化后的仪表盘返回示例：
 

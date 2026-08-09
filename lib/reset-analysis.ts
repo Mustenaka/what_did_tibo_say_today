@@ -44,12 +44,12 @@ export function buildResetAnalysisContext(
   const nowMs = now.getTime();
   const globalEvents = resetEvents
     .filter((event) => event.kind === "global" && event.scope !== "targeted")
-    .map((event) => ({ event, time: asTime(event.announcedAt) }))
+    .map((event) => ({ event, time: asTime(event.effectiveAt || event.announcedAt) }))
     .filter((item): item is { event: ResetEvent; time: number } => item.time !== null && item.time <= nowMs)
     .sort((a, b) => b.time - a.time);
 
   const latest = globalEvents[0] || null;
-  const lastResetAt = latest?.event.announcedAt || null;
+  const lastResetAt = latest?.event.effectiveAt || latest?.event.announcedAt || null;
   const postResetActivities = filterPostResetActivities(activities, lastResetAt);
   const hoursSinceReset = latest ? Math.max(0, (nowMs - latest.time) / HOUR_MS) : null;
   const weeklyProgressPercent = hoursSinceReset === null

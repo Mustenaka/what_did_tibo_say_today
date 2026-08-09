@@ -33,14 +33,19 @@ export interface DailyRollup {
 export type ResetEventStatus = "completed" | "rolling_out";
 export type ResetEventKind = "global" | "banked";
 export type ResetEventScope = "paid_codex_chatgpt_work" | "all_codex" | "targeted";
+export type ResetEventConfidence = "verified" | "inferred";
 
 export interface ResetEvent {
   id: string;
   announcedAt: string;
+  effectiveAt: string;
+  completedAt: string | null;
   day: string;
   kind: ResetEventKind;
   status: ResetEventStatus;
   scope: ResetEventScope;
+  confidence: ResetEventConfidence;
+  extractionVersion: string;
   evidenceText: string;
   evidenceUrl: string;
   source: string;
@@ -72,6 +77,20 @@ export interface ResetAnalysisResult {
   keywords?: string[];
   context: ResetAnalysisContext;
   guardrail?: "no_post_reset_activity" | "recent_reset_cooldown" | "early_cycle_cap" | null;
+  snapshot?: {
+    id: string;
+    generatedAt: string;
+    cached: boolean;
+    stale?: boolean;
+    promptVersion: string;
+    model: string;
+  };
+  delta?: {
+    previousLikelihood: ResetLikelihood | null;
+    likelihoodChanged: boolean;
+    newActivityCount: number;
+    comparedAt: string | null;
+  };
 }
 
 export interface DashboardData {

@@ -15,6 +15,13 @@
       "when": 1786256361007,
       "tag": "0001_sad_trish_tilby",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786270218700,
+      "tag": "0002_lethal_namora",
+      "breakpoints": true
     }
   ]
 }

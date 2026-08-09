@@ -22,10 +22,14 @@ function reset(id: string, announcedAt: string): ResetEvent {
   return {
     id,
     announcedAt,
+    effectiveAt: announcedAt,
+    completedAt: announcedAt,
     day: announcedAt.slice(0, 10),
     kind: "global",
     status: "completed",
     scope: "paid_codex_chatgpt_work",
+    confidence: "verified",
+    extractionVersion: "test-v1",
     evidenceText: "Usage limits have been reset.",
     evidenceUrl: `https://x.com/thsottiaux/status/${id}`,
     source: "test",
@@ -46,6 +50,20 @@ test("the completed reset closes the old evidence window", () => {
   assert.deepEqual(filtered.map((item) => item.id), ["after"]);
   assert.equal(context.postResetActivityCount, 1);
   assert.equal(context.explicitPostResetSignal, true);
+});
+
+test("the evidence window follows effective time when it differs from the announcement", () => {
+  const latest = {
+    ...reset("reset", "2026-08-08T21:00:00.000Z"),
+    effectiveAt: "2026-08-08T20:00:00.000Z",
+  };
+  const activities = [
+    activity("between", "2026-08-08T20:30:00.000Z", "A post after the effective reset"),
+  ];
+  const context = buildResetAnalysisContext(activities, [latest], new Date("2026-08-09T08:00:00.000Z"));
+
+  assert.equal(context.analysisWindowStart, latest.effectiveAt);
+  assert.equal(context.postResetActivityCount, 1);
 });
 
 test("the weekly proxy increases as the next weekly window approaches", () => {

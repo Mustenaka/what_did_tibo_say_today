@@ -13,7 +13,7 @@ const copy = {
     rolling: "滚动 7 天",
     heroKicker: "TIBO 活动与互动观察",
     heroTitle: "过去七天，Tibo 释放了什么信号？",
-    heroSummary: "追踪他的直接发言、回复、引用和转推，并判断下一次 Codex 额度重置信号是否正在靠近。",
+    heroSummary: "追踪他的直接发言、回复、引用和转推，并判断 Tibo 是否正在靠近下一次全局额度重置。",
     role: "OpenAI 首席重置官",
     openProfile: "在 X 打开 Tibo 的主页",
     statsKicker: "7 天信号概览",
@@ -42,9 +42,9 @@ const copy = {
     mediaOnly: "这条活动只包含媒体内容。",
     empty: "当前筛选下没有活动记录。",
     radarKicker: "CODEX 重置雷达",
-    radarTitle: "额度重置可能性",
+    radarTitle: "Tibo 再次重置可能性",
     analyzing: "正在比对重置信号",
-    analyzingHint: "DeepSeek 只分析最近一次全局重置之后的新发言与互动。",
+    analyzingHint: "服务端只分析最近一次全局重置之后的新发言，并复用可追溯的 D1 快照。",
     analysisError: "分析暂时不可用",
     waiting: "等待足够的公开发言",
     currentSignal: "当前信号等级",
@@ -54,11 +54,26 @@ const copy = {
     contextTitle: "重置感知基线",
     postResetSignals: "重置后信号",
     sinceLastReset: (date: string) => `窗口始于 ${date}`,
-    weeklyProxy: "周周期代理",
-    weeklyProxyHint: "公开估算，非账户级 resetsAt",
+    weeklyProxy: "全球行动周期代理",
+    weeklyProxyHint: "Tibo 行为参考，非个人 resetsAt",
     rapidRepeat: "24h 内先例",
     shortestRepeat: (hours: number | null) => hours === null ? "暂无可用间隔" : `最短 ${hours} 小时`,
     explicitOverride: "发现新的明确重置暗示",
+    changesTitle: "自上次分析",
+    firstAnalysis: "已建立首个可回溯分析基线",
+    newSignals: (count: number) => `新增 ${count} 条重置后信号`,
+    signalChanged: (from: string, to: string) => `等级由“${from}”变为“${to}”`,
+    signalSteady: "信号等级保持不变",
+    snapshotStale: "新数据分析失败，暂用上一份快照",
+    snapshotAt: (date: string) => `快照生成于 ${date}`,
+    personalKicker: "本机参考",
+    personalTitle: "个人额度周期",
+    personalNote: "这个时间只保存在当前浏览器，不参与 Tibo 行为判断，也不会上传到服务器。",
+    personalLabel: "你的下次已知额度重置时间",
+    personalEmpty: "填写账户显示的重置时间后，这里会显示个人倒计时。",
+    personalRemaining: (hours: number) => hours < 1 ? "预计不足 1 小时" : `预计还有约 ${hours} 小时`,
+    personalDue: "你填写的重置时间已经到达",
+    personalClear: "清除",
     cadence: { low: "周期早段", rising: "逐步接近", high: "临近周窗口", due: "已到代理窗口", unknown: "周期未知" },
     resetHistoryKicker: "已核实事件",
     resetHistoryTitle: "重置历史",
@@ -66,6 +81,7 @@ const copy = {
     resetHistoryCount: (count: number) => `最近 ${count} 条`,
     resetHistoryEmpty: "尚未找到可核实的重置公告。",
     resetSource: "查看原始公告",
+    effectiveTime: "有效时间",
     resetKinds: { global: "全局额度重置", banked: "可储存重置" },
     resetStatuses: { completed: "已执行", rolling_out: "传播中" },
     resetScopes: { paid_codex_chatgpt_work: "Codex + ChatGPT Work 付费用户", all_codex: "Codex 用户", targeted: "指定用户" },
@@ -96,7 +112,7 @@ const copy = {
     rolling: "Rolling 7 days",
     heroKicker: "TIBO ACTIVITY & INTERACTION WATCH",
     heroTitle: "What signals did Tibo send this week?",
-    heroSummary: "Track his original posts, replies, quotes, and reposts—and watch for clues that the next Codex limit reset may be near.",
+    heroSummary: "Track his posts, replies, quotes, and reposts—and watch for clues that Tibo may trigger another global limit reset.",
     role: "OpenAI Chief Reset Officer",
     openProfile: "Open Tibo's profile on X",
     statsKicker: "7-DAY SIGNAL OVERVIEW",
@@ -125,9 +141,9 @@ const copy = {
     mediaOnly: "This activity contains media only.",
     empty: "No activity matches this filter.",
     radarKicker: "CODEX RESET RADAR",
-    radarTitle: "Limit reset likelihood",
+    radarTitle: "Tibo reset likelihood",
     analyzing: "Comparing reset signals",
-    analyzingHint: "DeepSeek is analyzing only activity posted after the latest global reset.",
+    analyzingHint: "The server analyzes only post-reset activity and reuses an auditable D1 snapshot.",
     analysisError: "Analysis is temporarily unavailable",
     waiting: "Waiting for enough public posts",
     currentSignal: "Current signal level",
@@ -137,11 +153,26 @@ const copy = {
     contextTitle: "Reset-aware baseline",
     postResetSignals: "Post-reset signals",
     sinceLastReset: (date: string) => `Window starts ${date}`,
-    weeklyProxy: "Weekly proxy",
-    weeklyProxyHint: "Public estimate, not account-level resetsAt",
+    weeklyProxy: "Global-action cadence",
+    weeklyProxyHint: "Tibo behavior proxy, not personal resetsAt",
     rapidRepeat: "≤24h precedents",
     shortestRepeat: (hours: number | null) => hours === null ? "No interval available" : `Shortest ${hours}h`,
     explicitOverride: "New explicit reset signal detected",
+    changesTitle: "Since the previous analysis",
+    firstAnalysis: "First auditable analysis baseline created",
+    newSignals: (count: number) => `${count} new post-reset signal${count === 1 ? "" : "s"}`,
+    signalChanged: (from: string, to: string) => `Level changed from “${from}” to “${to}”`,
+    signalSteady: "Signal level is unchanged",
+    snapshotStale: "New-data analysis failed; using the previous snapshot",
+    snapshotAt: (date: string) => `Snapshot generated ${date}`,
+    personalKicker: "ON-DEVICE REFERENCE",
+    personalTitle: "Personal quota cycle",
+    personalNote: "This time stays in this browser. It is not uploaded or used to judge Tibo's behavior.",
+    personalLabel: "Your next known quota reset time",
+    personalEmpty: "Enter the reset time shown for your account to see a personal countdown.",
+    personalRemaining: (hours: number) => hours < 1 ? "Estimated in under 1 hour" : `About ${hours} hours remaining`,
+    personalDue: "The reset time you entered has arrived",
+    personalClear: "Clear",
     cadence: { low: "Early in cycle", rising: "Getting closer", high: "Near weekly window", due: "Proxy window reached", unknown: "Unknown cycle" },
     resetHistoryKicker: "VERIFIED EVENTS",
     resetHistoryTitle: "Reset history",
@@ -149,6 +180,7 @@ const copy = {
     resetHistoryCount: (count: number) => `${count} latest`,
     resetHistoryEmpty: "No verifiable reset announcements yet.",
     resetSource: "Open source post",
+    effectiveTime: "Effective time",
     resetKinds: { global: "Usage-limit reset", banked: "Banked reset" },
     resetStatuses: { completed: "Completed", rolling_out: "Rolling out" },
     resetScopes: { paid_codex_chatgpt_work: "Paid Codex + ChatGPT Work", all_codex: "Codex users", targeted: "Selected users" },
@@ -196,21 +228,16 @@ export function TiboDashboard() {
   const [analysis, setAnalysis] = useState<ResetAnalysisResult | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState(false);
+  const [personalResetAt, setPersonalResetAt] = useState("");
+  const [loadedAt] = useState(() => Date.now());
   const t = copy[language];
 
-  async function runAnalysis(data?: DashboardData) {
-    const activeDashboard = data || dashboard;
-    if (!activeDashboard) return;
-    const analyzable = activeDashboard.activities.filter((item) => item.type !== "repost");
+  async function runAnalysis() {
     setAnalysis(null);
     setAnalysisLoading(true);
     setAnalysisError(false);
     try {
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tweets: analyzable, context: activeDashboard.resetContext }),
-      });
+      const response = await fetch("/api/analyze", { cache: "no-store" });
       if (!response.ok) throw new Error("analysis failed");
       setAnalysis(await response.json());
     } catch {
@@ -220,15 +247,15 @@ export function TiboDashboard() {
     }
   }
 
-  async function loadActivities(force = false) {
+  async function loadActivities() {
     setDataLoading(true);
     setDataError(false);
     try {
-      const response = await fetch(`/api/activities/recent${force ? "?refresh=1" : ""}`, { cache: "no-store" });
+      const response = await fetch("/api/activities/recent", { cache: "no-store" });
       if (!response.ok) throw new Error("activity fetch failed");
       const next = await response.json() as DashboardData;
       setDashboard(next);
-      void runAnalysis(next);
+      void runAnalysis();
     } catch {
       setDataError(true);
     } finally {
@@ -237,8 +264,17 @@ export function TiboDashboard() {
   }
 
   useEffect(() => {
+    // Initial data hydration intentionally synchronizes the client with the Worker API.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadActivities();
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem("tibo-personal-reset-at") || "";
+    // Browser-only preference; it is intentionally not authoritative product data.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPersonalResetAt(stored);
   }, []);
 
   useEffect(() => {
@@ -260,6 +296,11 @@ export function TiboDashboard() {
     ? Math.round((dashboard.stats.interactions / dashboard.stats.total) * 100)
     : 0;
   const resetContext = analysis?.context || dashboard?.resetContext;
+  const personalReset = useMemo(() => {
+    const time = new Date(personalResetAt).getTime();
+    if (!personalResetAt || !Number.isFinite(time)) return null;
+    return { hoursRemaining: Math.max(0, Math.ceil((time - loadedAt) / 3_600_000)), due: time <= loadedAt };
+  }, [loadedAt, personalResetAt]);
   const storageNote = dataLoading
     ? t.storageLoading
     : !dashboard?.coverage.storedCount
@@ -286,6 +327,16 @@ export function TiboDashboard() {
   function weekday(value: string) {
     return new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en", { weekday: "short", timeZone: "UTC" })
       .format(new Date(`${value}T12:00:00Z`));
+  }
+
+  function savePersonalReset(value: string) {
+    setPersonalResetAt(value);
+    if (value) window.localStorage.setItem("tibo-personal-reset-at", value);
+    else window.localStorage.removeItem("tibo-personal-reset-at");
+  }
+
+  function likelihoodLabel(value: ResetAnalysisResult["likelihood"]) {
+    return t.likelihood[value] || t.likelihood.unknown;
   }
 
   return (
@@ -335,7 +386,7 @@ export function TiboDashboard() {
                     <span className="range-label">{dashboard?.range.start || "—"} → {dashboard?.range.end || "—"}</span>
                   </div>
                   {dataError ? (
-                    <div className="error-state"><p>{t.dataError}</p><button onClick={() => void loadActivities(true)}>{t.retry}</button></div>
+                    <div className="error-state"><p>{t.dataError}</p><button onClick={() => void loadActivities()}>{t.retry}</button></div>
                   ) : (
                     <>
                       <div className="metric-grid" aria-busy={dataLoading}>
@@ -401,7 +452,23 @@ export function TiboDashboard() {
                   <div className="analysis-body">
                     {analysisLoading ? <div className="analysis-state"><div className="signal-loader"><i /><i /><i /><i /></div><strong>{t.analyzing}</strong><p>{t.analyzingHint}</p></div>
                       : analysisError ? <div className="analysis-state"><strong>{t.analysisError}</strong><button onClick={() => void runAnalysis()}>{t.retry}</button></div>
-                      : analysis ? <><span className="signal-label">{t.currentSignal}</span><strong className={`likelihood likelihood-${analysis.likelihood}`}>{t.likelihood[analysis.likelihood] || t.likelihood.unknown}</strong><div className="signal-meter"><i /><i /><i /><i /></div>{analysis.keywords?.length ? <div className="keyword-list">{analysis.keywords.map((keyword) => <span key={keyword}>{keyword}</span>)}</div> : null}{analysis.reason && <div className="analysis-copy"><h3>{t.reason}</h3><p>{analysis.reason}</p></div>}{analysis.summary && <div className="analysis-copy"><h3>{t.summary}</h3><p>{analysis.summary}</p></div>}</>
+                      : analysis ? <>
+                        <span className="signal-label">{t.currentSignal}</span>
+                        <strong className={`likelihood likelihood-${analysis.likelihood}`}>{likelihoodLabel(analysis.likelihood)}</strong>
+                        <div className="signal-meter"><i /><i /><i /><i /></div>
+                        {analysis.keywords?.length ? <div className="keyword-list">{analysis.keywords.map((keyword) => <span key={keyword}>{keyword}</span>)}</div> : null}
+                        {analysis.reason && <div className="analysis-copy"><h3>{t.reason}</h3><p>{analysis.reason}</p></div>}
+                        {analysis.summary && <div className="analysis-copy"><h3>{t.summary}</h3><p>{analysis.summary}</p></div>}
+                        {analysis.snapshot && <div className="analysis-delta" aria-live="polite">
+                          <div><span>{t.changesTitle}</span>{analysis.snapshot.stale && <b>{t.snapshotStale}</b>}</div>
+                          <strong>{analysis.delta?.previousLikelihood
+                            ? analysis.delta.likelihoodChanged
+                              ? t.signalChanged(likelihoodLabel(analysis.delta.previousLikelihood), likelihoodLabel(analysis.likelihood))
+                              : t.signalSteady
+                            : t.firstAnalysis}</strong>
+                          <p>{t.newSignals(analysis.delta?.newActivityCount || 0)} · {t.snapshotAt(formatDate(analysis.snapshot.generatedAt))}</p>
+                        </div>}
+                      </>
                       : <div className="analysis-state"><strong>{t.waiting}</strong></div>}
                     {resetContext && <div className="reset-context-panel">
                       <div className="reset-context-heading"><strong>{t.contextTitle}</strong>{resetContext.explicitPostResetSignal && <span>{t.explicitOverride}</span>}</div>
@@ -414,6 +481,24 @@ export function TiboDashboard() {
                   </div>
                   <p className="analysis-disclaimer">{t.disclaimer}</p>
                 </section>
+                <section className="personal-cycle-card card-surface" aria-labelledby="personal-cycle-title">
+                  <div className="personal-cycle-header"><p>{t.personalKicker}</p><h2 id="personal-cycle-title">{t.personalTitle}</h2></div>
+                  <p id="personal-cycle-note">{t.personalNote}</p>
+                  <label htmlFor="personal-reset-at">{t.personalLabel}</label>
+                  <div className="personal-cycle-control">
+                    <input
+                      id="personal-reset-at"
+                      type="datetime-local"
+                      value={personalResetAt}
+                      aria-describedby="personal-cycle-note personal-cycle-result"
+                      onChange={(event) => savePersonalReset(event.target.value)}
+                    />
+                    {personalResetAt && <button type="button" onClick={() => savePersonalReset("")}>{t.personalClear}</button>}
+                  </div>
+                  <div id="personal-cycle-result" className="personal-cycle-result" aria-live="polite">
+                    {personalReset ? <><strong>{personalReset.due ? t.personalDue : t.personalRemaining(personalReset.hoursRemaining)}</strong><span>{formatDate(personalResetAt)}</span></> : <span>{t.personalEmpty}</span>}
+                  </div>
+                </section>
                 <section className="reset-history-card card-surface" aria-labelledby="reset-history-title">
                   <div className="reset-history-header">
                     <div><p>{t.resetHistoryKicker}</p><h2 id="reset-history-title">{t.resetHistoryTitle}</h2></div>
@@ -425,7 +510,7 @@ export function TiboDashboard() {
                       {dashboard.resetHistory.map((reset) => (
                         <li key={reset.id}>
                           <div className="reset-event-topline">
-                            <time dateTime={reset.announcedAt}>{formatDate(reset.announcedAt)}</time>
+                            <time dateTime={reset.effectiveAt} title={t.effectiveTime}>{formatDate(reset.effectiveAt)}</time>
                             <span className={`reset-status reset-status-${reset.status}`}>{t.resetStatuses[reset.status]}</span>
                           </div>
                           <strong>{t.resetKinds[reset.kind]}</strong>

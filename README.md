@@ -30,6 +30,8 @@ The probability card is intentionally playful and is not official OpenAI guidanc
 - Daily activity rhythm and interaction-mix visualizations.
 - DeepSeek-powered Codex / ChatGPT Work reset-signal analysis.
 - Reset-aware analysis that starts after the latest confirmed global reset instead of reusing the whole seven-day feed.
+- Server-owned, cached analysis snapshots: visitors cannot submit arbitrary model input, and unchanged evidence does not spend another DeepSeek request.
+- A “since the previous analysis” explanation and an optional personal reset countdown stored only in the visitor's browser.
 - Verified reset history with `completed` and `rolling_out` states.
 - Durable Sites D1 storage with idempotent writes and fetch-run health records.
 - FxTwitter API v2 as the primary source, with Nitter RSS as a fallback.
@@ -57,7 +59,8 @@ flowchart LR
     H --> API
     API --> UI["React dashboard"]
     A --> DS["DeepSeek analysis"]
-    DS --> UI
+    DS --> S["D1 · analysis_snapshots"]
+    S --> UI
 ```
 
 | Layer | Technology |
@@ -101,6 +104,7 @@ The result includes the post-reset activity count, weekly proxy progress, short-
 | `activities` | Normalized X activities keyed by status ID, including type, target handle, source, and publication time. |
 | `fetch_runs` | Refresh attempts, source, item count, success state, and diagnostic error text. |
 | `reset_events` | Durable verified reset events with status, kind, scope, evidence text, and source URL. |
+| `analysis_snapshots` | Input fingerprint, model/prompt version, context, result, comparison metadata, and the subsequent reset outcome when known. |
 
 Activity rows older than 30 days may be pruned because the product window is seven days. Verified reset events are stored separately and are not removed by that activity-retention rule.
 
@@ -124,6 +128,7 @@ FXTWITTER_BASE_URL=https://api.fxtwitter.com
 X_HANDLE=thsottiaux
 NITTER_INSTANCES=https://nitter.net,https://nitter.poast.org,https://nitter.privacyredirect.com
 REFRESH_TTL_SECONDS=600
+REFRESH_SECRET=replace_with_a_long_random_value
 ```
 
 FxTwitter does not require an X login, cookie, OAuth token, or project API key. Public Nitter instances are less reliable and remain a best-effort fallback. Never commit a real API key.
@@ -154,8 +159,9 @@ npm run db:generate
 | Endpoint | Method | Description |
 | --- | --- | --- |
 | `/api/activities/recent` | `GET` | Refreshes sources according to the cache policy, writes D1, and returns activity, seven-day statistics, coverage, and recent reset history. |
-| `/api/activities/recent?refresh=1` | `GET` | Requests a refresh without waiting for the normal freshness window. |
-| `/api/analyze` | `POST` | Evaluates supplied non-repost Tibo activity for reset signals. |
+| `/api/activities/recent?refresh=1` | `GET` | Forces a refresh only with an authorized bearer token; visitors receive `403`. |
+| `/api/analyze` | `GET` | Reads server-owned D1 activity, reuses or creates an auditable analysis snapshot, and returns the change from the previous snapshot. |
+| `/api/refresh` | `POST` | Scheduler-ready refresh endpoint protected by `Authorization: Bearer $REFRESH_SECRET`. |
 
 Abbreviated dashboard response:
 

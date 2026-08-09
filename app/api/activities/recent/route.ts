@@ -1,11 +1,16 @@
 import { getRecentDashboard, refreshIfNeeded } from "../../../../db/storage";
+import { isAuthorizedRefresh } from "../../../../lib/refresh-auth";
 
 export const runtime = "edge";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const days = Math.min(30, Math.max(1, Number.parseInt(url.searchParams.get("days") || "7", 10) || 7));
-  const force = url.searchParams.get("refresh") === "1";
+  const forceRequested = url.searchParams.get("refresh") === "1";
+  if (forceRequested && !isAuthorizedRefresh(request)) {
+    return Response.json({ error: "Forced refresh is not available to visitors" }, { status: 403 });
+  }
+  const force = forceRequested;
   let refreshError: unknown = null;
 
   try {

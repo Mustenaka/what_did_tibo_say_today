@@ -12,6 +12,8 @@ const event = (
 ): StoredResetEvent => ({
   id,
   announcedAt,
+  effectiveAt: announcedAt,
+  completedAt: status === "completed" ? announcedAt : null,
   day: announcedAt.slice(0, 10),
   kind,
   status,
@@ -19,6 +21,8 @@ const event = (
   evidenceText,
   evidenceUrl: `https://x.com/thsottiaux/status/${id}`,
   source: "tibo_x",
+  confidence: "verified",
+  extractionVersion: "curated-v2",
   discoveredAt: "2026-08-09T00:00:00.000Z",
   activityId: id,
 });
@@ -70,6 +74,8 @@ export function resetEventFromActivity(activity: Activity, discoveredAt: string)
   return {
     id: activity.id,
     announcedAt: activity.publishedAt,
+    effectiveAt: activity.publishedAt,
+    completedAt: completed ? activity.publishedAt : null,
     day: activity.day,
     kind,
     status: completed ? "completed" : "rolling_out",
@@ -77,6 +83,8 @@ export function resetEventFromActivity(activity: Activity, discoveredAt: string)
     evidenceText: text,
     evidenceUrl: activity.link || `https://x.com/thsottiaux/status/${activity.id}`,
     source: "tibo_x",
+    confidence: "verified",
+    extractionVersion: "rule-v2",
     discoveredAt,
     activityId: activity.id,
   };

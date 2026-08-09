@@ -47,6 +47,8 @@ export function ensureDatabase() {
         CREATE TABLE IF NOT EXISTS reset_events (
           id TEXT PRIMARY KEY,
           announced_at TEXT NOT NULL,
+          effective_at TEXT,
+          completed_at TEXT,
           day TEXT NOT NULL,
           kind TEXT NOT NULL CHECK (kind IN ('global', 'banked')),
           status TEXT NOT NULL CHECK (status IN ('completed', 'rolling_out')),
@@ -54,23 +56,56 @@ export function ensureDatabase() {
           evidence_text TEXT NOT NULL,
           evidence_url TEXT NOT NULL,
           source TEXT NOT NULL,
+          confidence TEXT NOT NULL DEFAULT 'verified' CHECK (confidence IN ('verified', 'inferred')),
+          extraction_version TEXT NOT NULL DEFAULT 'legacy-v1',
           discovered_at TEXT NOT NULL,
           activity_id TEXT
+        )
+      `),
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS analysis_snapshots (
+          id TEXT PRIMARY KEY,
+          generated_at TEXT NOT NULL,
+          latest_reset_id TEXT,
+          analysis_window_start TEXT,
+          latest_activity_id TEXT,
+          activity_ids_json TEXT NOT NULL,
+          context_json TEXT NOT NULL,
+          result_json TEXT NOT NULL,
+          model TEXT NOT NULL,
+          prompt_version TEXT NOT NULL,
+          outcome_reset_id TEXT,
+          evaluated_at TEXT
         )
       `),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_activities_published_at ON activities(published_at)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_activities_day_type ON activities(day, type)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_fetch_runs_status_time ON fetch_runs(succeeded, fetched_at)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_reset_events_announced_at ON reset_events(announced_at)"),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_analysis_snapshots_generated_at ON analysis_snapshots(generated_at)"),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_analysis_snapshots_outcome_reset_id ON analysis_snapshots(outcome_reset_id)"),
     ]);
+    const resetColumnRows = await db.prepare("PRAGMA table_info(reset_events)")
+      .all<{ name: string }>();
+    const resetColumns = new Set((resetColumnRows.results || []).map((column) => column.name));
+    const resetAlterations = [
+      !resetColumns.has("effective_at") ? db.prepare("ALTER TABLE reset_events ADD COLUMN effective_at TEXT") : null,
+      !resetColumns.has("completed_at") ? db.prepare("ALTER TABLE reset_events ADD COLUMN completed_at TEXT") : null,
+      !resetColumns.has("confidence") ? db.prepare("ALTER TABLE reset_events ADD COLUMN confidence TEXT NOT NULL DEFAULT 'verified'") : null,
+      !resetColumns.has("extraction_version") ? db.prepare("ALTER TABLE reset_events ADD COLUMN extraction_version TEXT NOT NULL DEFAULT 'legacy-v1'") : null,
+    ].filter((statement): statement is NonNullable<typeof statement> => statement !== null);
+    if (resetAlterations.length) await db.batch(resetAlterations);
     await db.batch(CURATED_RESET_EVENTS.map((reset) => db.prepare(`
       INSERT OR IGNORE INTO reset_events (
-        id, announced_at, day, kind, status, scope, evidence_text, evidence_url,
-        source, discovered_at, activity_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, announced_at, effective_at, completed_at, day, kind, status, scope,
+        evidence_text, evidence_url, source, confidence, extraction_version,
+        discovered_at, activity_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       reset.id,
       reset.announcedAt,
+      reset.effectiveAt,
+      reset.completedAt,
       reset.day,
       reset.kind,
       reset.status,
@@ -78,9 +113,15 @@ export function ensureDatabase() {
       reset.evidenceText,
       reset.evidenceUrl,
       reset.source,
+      reset.confidence,
+      reset.extractionVersion,
       reset.discoveredAt,
       reset.activityId,
     )));
+    await db.batch([
+      db.prepare("UPDATE reset_events SET effective_at = announced_at WHERE effective_at IS NULL"),
+      db.prepare("UPDATE reset_events SET completed_at = announced_at WHERE completed_at IS NULL AND status = 'completed'"),
+    ]);
   })();
   return schemaReady;
 }
@@ -123,16 +164,19 @@ async function saveFetch(result: SourceResult) {
   for (let index = 0; index < statements.length; index += 75) {
     await db.batch(statements.slice(index, index + 75));
   }
-  const resetStatements = result.activities
+  const discoveredResets = result.activities
     .map((activity) => resetEventFromActivity(activity, result.fetchedAt))
-    .filter((reset): reset is NonNullable<typeof reset> => Boolean(reset))
-    .map((reset) => db.prepare(`
+    .filter((reset): reset is NonNullable<typeof reset> => Boolean(reset));
+  const resetStatements = discoveredResets.map((reset) => db.prepare(`
       INSERT INTO reset_events (
-        id, announced_at, day, kind, status, scope, evidence_text, evidence_url,
-        source, discovered_at, activity_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, announced_at, effective_at, completed_at, day, kind, status, scope,
+        evidence_text, evidence_url, source, confidence, extraction_version,
+        discovered_at, activity_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         announced_at = excluded.announced_at,
+        effective_at = excluded.effective_at,
+        completed_at = excluded.completed_at,
         day = excluded.day,
         kind = excluded.kind,
         status = excluded.status,
@@ -140,11 +184,15 @@ async function saveFetch(result: SourceResult) {
         evidence_text = excluded.evidence_text,
         evidence_url = excluded.evidence_url,
         source = excluded.source,
+        confidence = excluded.confidence,
+        extraction_version = excluded.extraction_version,
         discovered_at = excluded.discovered_at,
         activity_id = excluded.activity_id
     `).bind(
       reset.id,
       reset.announcedAt,
+      reset.effectiveAt,
+      reset.completedAt,
       reset.day,
       reset.kind,
       reset.status,
@@ -152,10 +200,20 @@ async function saveFetch(result: SourceResult) {
       reset.evidenceText,
       reset.evidenceUrl,
       reset.source,
+      reset.confidence,
+      reset.extractionVersion,
       reset.discoveredAt,
       reset.activityId,
     ));
   if (resetStatements.length) await db.batch(resetStatements);
+  for (const reset of discoveredResets.filter((item) => item.kind === "global" && item.scope !== "targeted")) {
+    const lookback = new Date(new Date(reset.effectiveAt).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    await db.prepare(`
+      UPDATE analysis_snapshots
+      SET outcome_reset_id = ?, evaluated_at = ?
+      WHERE outcome_reset_id IS NULL AND generated_at >= ? AND generated_at < ?
+    `).bind(reset.id, result.fetchedAt, lookback, reset.effectiveAt).run();
+  }
   await db.batch([
     db.prepare(`
       INSERT INTO fetch_runs (source, fetched_at, item_count, succeeded, error)
@@ -225,10 +283,14 @@ function resetEventFromRow(row: Record<string, unknown>): ResetEvent {
   return {
     id: String(row.id),
     announcedAt: String(row.announced_at),
+    effectiveAt: String(row.effective_at || row.announced_at),
+    completedAt: row.completed_at ? String(row.completed_at) : null,
     day: String(row.day),
     kind: String(row.kind) as ResetEvent["kind"],
     status: String(row.status) as ResetEvent["status"],
     scope: String(row.scope) as ResetEvent["scope"],
+    confidence: String(row.confidence || "verified") as ResetEvent["confidence"],
+    extractionVersion: String(row.extraction_version || "legacy-v1"),
     evidenceText: String(row.evidence_text || ""),
     evidenceUrl: String(row.evidence_url || ""),
     source: String(row.source || "tibo_x"),
@@ -278,7 +340,8 @@ export async function getRecentDashboard(days = 7, now = new Date()): Promise<Da
       FROM activities
     `).first<{ oldestDay: string | null; newestDay: string | null; storedCount: number }>(),
     db.prepare(`
-      SELECT id, announced_at, day, kind, status, scope, evidence_text, evidence_url, source
+      SELECT id, announced_at, effective_at, completed_at, day, kind, status, scope,
+             evidence_text, evidence_url, source, confidence, extraction_version
       FROM reset_events
       ORDER BY announced_at DESC
       LIMIT 30

@@ -106,7 +106,7 @@ body::before {
   transition: transform .18s ease, background .18s ease;
 }
 .language-button:hover { background: #1b3d2a; transform: rotate(-6deg); }
-.language-button:focus-visible, .filter-row button:focus-visible, .error-state button:focus-visible, .analysis-state button:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+.language-button:focus-visible, .filter-row button:focus-visible, .error-state button:focus-visible, .analysis-state button:focus-visible, .personal-cycle-control input:focus-visible, .personal-cycle-control button:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
 
 .hero {
   position: relative;
@@ -252,6 +252,12 @@ body::before {
 .analysis-copy { margin-top: 22px; }
 .analysis-copy h3 { margin: 0 0 7px; color: rgba(244,240,230,.48); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
 .analysis-copy p, .analysis-state p { margin: 0; color: rgba(244,240,230,.7); font-size: 12px; line-height: 1.65; }
+.analysis-delta { margin-top: 22px; padding: 14px; border: 1px solid rgba(215,249,91,.22); border-radius: 14px; background: rgba(215,249,91,.06); }
+.analysis-delta > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.analysis-delta > div > span { color: var(--lime); font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.analysis-delta > div > b { max-width: 150px; padding: 4px 7px; border-radius: 999px; background: var(--orange); color: white; font-size: 7px; line-height: 1.35; text-align: center; }
+.analysis-delta > strong { display: block; margin-top: 9px; color: var(--paper); font-size: 11px; line-height: 1.5; }
+.analysis-delta > p { margin: 5px 0 0; color: rgba(244,240,230,.52); font-size: 8px; line-height: 1.5; }
 .reset-context-panel { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(244,240,230,.14); }
 .reset-context-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .reset-context-heading > strong { color: rgba(244,240,230,.52); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; }
@@ -265,6 +271,17 @@ body::before {
 .analysis-state strong { font-family: var(--serif); font-size: 26px; font-weight: 500; }
 .analysis-state button, .error-state button { width: fit-content; padding: 9px 14px; border: 0; border-radius: 999px; background: var(--lime); font-weight: 800; cursor: pointer; }
 .analysis-disclaimer { margin: 0; padding: 15px 24px; border-top: 1px solid rgba(244,240,230,.12); color: rgba(244,240,230,.4); font-size: 9px; }
+.personal-cycle-card { padding: 20px; }
+.personal-cycle-header p { margin: 0 0 6px; color: var(--blue); font-size: 9px; font-weight: 900; letter-spacing: .12em; }
+.personal-cycle-header h2 { margin: 0; font-family: var(--serif); font-size: 25px; font-weight: 500; letter-spacing: -.03em; }
+.personal-cycle-card > p { margin: 11px 0 16px; color: var(--muted); font-size: 9px; line-height: 1.55; }
+.personal-cycle-card label { display: block; margin-bottom: 7px; font-size: 10px; font-weight: 850; }
+.personal-cycle-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+.personal-cycle-control input { min-width: 0; height: 39px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: #f8f6f0; color: var(--ink); font: inherit; font-size: 10px; }
+.personal-cycle-control button { padding: 0 10px; border: 1px solid var(--ink); border-radius: 10px; background: var(--ink); color: white; font-size: 9px; font-weight: 850; cursor: pointer; }
+.personal-cycle-result { min-height: 45px; display: flex; flex-direction: column; justify-content: center; gap: 3px; margin-top: 10px; padding: 10px 12px; border-radius: 11px; background: rgba(111,144,173,.1); }
+.personal-cycle-result strong { color: var(--ink); font-size: 11px; }
+.personal-cycle-result span { color: var(--muted); font-size: 9px; line-height: 1.4; }
 .reset-history-card { overflow: hidden; }
 .reset-history-header { display: flex; align-items: end; justify-content: space-between; gap: 14px; padding: 22px 20px 14px; }
 .reset-history-header p { margin: 0 0 6px; color: var(--orange); font-size: 9px; font-weight: 900; letter-spacing: .12em; }

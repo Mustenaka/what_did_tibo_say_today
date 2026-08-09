@@ -9,6 +9,7 @@ type RuntimeEnv = {
   X_HANDLE?: string;
   NITTER_INSTANCES?: string;
   REFRESH_TTL_SECONDS?: string;
+  REFRESH_SECRET?: string;
 };
 
 export function getRuntimeEnv(): RuntimeEnv {
