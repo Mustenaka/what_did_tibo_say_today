@@ -2,6 +2,7 @@ import { getD1 } from ".";
 import { fetchRecentActivities } from "../lib/activity-source";
 import { getRuntimeEnv } from "../lib/runtime-env";
 import { CURATED_RESET_EVENTS, resetEventFromActivity } from "../lib/reset-history";
+import { buildResetAnalysisContext } from "../lib/reset-analysis";
 import type { Activity, DashboardData, DailyRollup, ResetEvent, SourceResult } from "../lib/types";
 
 const ACTIVITY_TYPES = new Set(["original", "reply", "quote", "repost"]);
@@ -280,16 +281,18 @@ export async function getRecentDashboard(days = 7, now = new Date()): Promise<Da
       SELECT id, announced_at, day, kind, status, scope, evidence_text, evidence_url, source
       FROM reset_events
       ORDER BY announced_at DESC
-      LIMIT 8
+      LIMIT 30
     `).all<Record<string, unknown>>(),
   ]);
+  const allResetEvents = (resetRows.results || []).map(resetEventFromRow);
 
   return {
     range: { days: safeDays, start, end },
     stats,
     daily: [...daily.values()],
     activities,
-    resetHistory: (resetRows.results || []).map(resetEventFromRow),
+    resetHistory: allResetEvents.slice(0, 8),
+    resetContext: buildResetAnalysisContext(activities, allResetEvents, now),
     source: latestSuccess?.source || null,
     fetchedAt: latestSuccess?.fetchedAt || null,
     coverage: {

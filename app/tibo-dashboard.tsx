@@ -1,17 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Activity, DashboardData } from "../lib/types";
+import type { Activity, DashboardData, ResetAnalysisResult } from "../lib/types";
 
 type Language = "zh" | "en";
 type Filter = "all" | "original" | "interactions";
-type Analysis = {
-  likelihood: "very_likely" | "likely" | "unlikely" | "none" | "unknown";
-  reason?: string;
-  summary?: string;
-  keywords?: string[];
-};
-
 const copy = {
   zh: {
     appTitle: "Tibo 过去 7 天说了啥？",
@@ -51,13 +44,22 @@ const copy = {
     radarKicker: "CODEX 重置雷达",
     radarTitle: "额度重置可能性",
     analyzing: "正在比对重置信号",
-    analyzingHint: "DeepSeek 正在分析 Tibo 过去 7 天的发言语义。",
+    analyzingHint: "DeepSeek 只分析最近一次全局重置之后的新发言与互动。",
     analysisError: "分析暂时不可用",
     waiting: "等待足够的公开发言",
     currentSignal: "当前信号等级",
     reason: "分析依据",
     summary: "信号摘要",
     disclaimer: "娱乐性信号判断，不代表 OpenAI 官方信息",
+    contextTitle: "重置感知基线",
+    postResetSignals: "重置后信号",
+    sinceLastReset: (date: string) => `窗口始于 ${date}`,
+    weeklyProxy: "周周期代理",
+    weeklyProxyHint: "公开估算，非账户级 resetsAt",
+    rapidRepeat: "24h 内先例",
+    shortestRepeat: (hours: number | null) => hours === null ? "暂无可用间隔" : `最短 ${hours} 小时`,
+    explicitOverride: "发现新的明确重置暗示",
+    cadence: { low: "周期早段", rising: "逐步接近", high: "临近周窗口", due: "已到代理窗口", unknown: "周期未知" },
     resetHistoryKicker: "已核实事件",
     resetHistoryTitle: "重置历史",
     resetHistoryNote: "只收录 Tibo 明确宣布已执行或正在传播的额度重置；预告、玩笑和个人猜测不计入。",
@@ -125,13 +127,22 @@ const copy = {
     radarKicker: "CODEX RESET RADAR",
     radarTitle: "Limit reset likelihood",
     analyzing: "Comparing reset signals",
-    analyzingHint: "DeepSeek is analyzing Tibo's activity from the past 7 days.",
+    analyzingHint: "DeepSeek is analyzing only activity posted after the latest global reset.",
     analysisError: "Analysis is temporarily unavailable",
     waiting: "Waiting for enough public posts",
     currentSignal: "Current signal level",
     reason: "Reasoning",
     summary: "Signal summary",
     disclaimer: "An entertainment signal check, not official OpenAI information",
+    contextTitle: "Reset-aware baseline",
+    postResetSignals: "Post-reset signals",
+    sinceLastReset: (date: string) => `Window starts ${date}`,
+    weeklyProxy: "Weekly proxy",
+    weeklyProxyHint: "Public estimate, not account-level resetsAt",
+    rapidRepeat: "≤24h precedents",
+    shortestRepeat: (hours: number | null) => hours === null ? "No interval available" : `Shortest ${hours}h`,
+    explicitOverride: "New explicit reset signal detected",
+    cadence: { low: "Early in cycle", rising: "Getting closer", high: "Near weekly window", due: "Proxy window reached", unknown: "Unknown cycle" },
     resetHistoryKicker: "VERIFIED EVENTS",
     resetHistoryTitle: "Reset history",
     resetHistoryNote: "Only explicit announcements that a reset was completed or propagating are included. Teasers, jokes, and guesses are excluded.",
@@ -182,21 +193,23 @@ export function TiboDashboard() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [dataError, setDataError] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
-  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [analysis, setAnalysis] = useState<ResetAnalysisResult | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState(false);
   const t = copy[language];
 
-  async function runAnalysis(activities?: Activity[]) {
-    const analyzable = (activities || dashboard?.activities || []).filter((item) => item.type !== "repost");
-    if (!analyzable.length) return;
+  async function runAnalysis(data?: DashboardData) {
+    const activeDashboard = data || dashboard;
+    if (!activeDashboard) return;
+    const analyzable = activeDashboard.activities.filter((item) => item.type !== "repost");
+    setAnalysis(null);
     setAnalysisLoading(true);
     setAnalysisError(false);
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tweets: analyzable }),
+        body: JSON.stringify({ tweets: analyzable, context: activeDashboard.resetContext }),
       });
       if (!response.ok) throw new Error("analysis failed");
       setAnalysis(await response.json());
@@ -215,7 +228,7 @@ export function TiboDashboard() {
       if (!response.ok) throw new Error("activity fetch failed");
       const next = await response.json() as DashboardData;
       setDashboard(next);
-      void runAnalysis(next.activities);
+      void runAnalysis(next);
     } catch {
       setDataError(true);
     } finally {
@@ -246,6 +259,7 @@ export function TiboDashboard() {
   const share = dashboard?.stats.total
     ? Math.round((dashboard.stats.interactions / dashboard.stats.total) * 100)
     : 0;
+  const resetContext = analysis?.context || dashboard?.resetContext;
   const storageNote = dataLoading
     ? t.storageLoading
     : !dashboard?.coverage.storedCount
@@ -389,6 +403,14 @@ export function TiboDashboard() {
                       : analysisError ? <div className="analysis-state"><strong>{t.analysisError}</strong><button onClick={() => void runAnalysis()}>{t.retry}</button></div>
                       : analysis ? <><span className="signal-label">{t.currentSignal}</span><strong className={`likelihood likelihood-${analysis.likelihood}`}>{t.likelihood[analysis.likelihood] || t.likelihood.unknown}</strong><div className="signal-meter"><i /><i /><i /><i /></div>{analysis.keywords?.length ? <div className="keyword-list">{analysis.keywords.map((keyword) => <span key={keyword}>{keyword}</span>)}</div> : null}{analysis.reason && <div className="analysis-copy"><h3>{t.reason}</h3><p>{analysis.reason}</p></div>}{analysis.summary && <div className="analysis-copy"><h3>{t.summary}</h3><p>{analysis.summary}</p></div>}</>
                       : <div className="analysis-state"><strong>{t.waiting}</strong></div>}
+                    {resetContext && <div className="reset-context-panel">
+                      <div className="reset-context-heading"><strong>{t.contextTitle}</strong>{resetContext.explicitPostResetSignal && <span>{t.explicitOverride}</span>}</div>
+                      <div className="reset-context-grid">
+                        <article><span>{t.postResetSignals}</span><strong>{resetContext.postResetActivityCount}</strong><small>{t.sinceLastReset(formatDate(resetContext.analysisWindowStart || ""))}</small></article>
+                        <article><span>{t.weeklyProxy}</span><strong>{resetContext.weeklyProgressPercent ?? "—"}%</strong><small>{t.cadence[resetContext.cadencePressure]} · {t.weeklyProxyHint}</small></article>
+                        <article><span>{t.rapidRepeat}</span><strong>{resetContext.rapidRepeatCount30d}</strong><small>{t.shortestRepeat(resetContext.shortestIntervalHours)}</small></article>
+                      </div>
+                    </div>}
                   </div>
                   <p className="analysis-disclaimer">{t.disclaimer}</p>
                 </section>

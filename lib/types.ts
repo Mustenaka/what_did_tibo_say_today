@@ -46,6 +46,34 @@ export interface ResetEvent {
   source: string;
 }
 
+export type ResetCadencePressure = "low" | "rising" | "high" | "due" | "unknown";
+export type ResetLikelihood = "very_likely" | "likely" | "unlikely" | "none" | "unknown";
+
+export interface ResetAnalysisContext {
+  analysisWindowStart: string | null;
+  lastResetAt: string | null;
+  postResetActivityCount: number;
+  hoursSinceReset: number | null;
+  weeklyWindowHours: number;
+  weeklyProgressPercent: number | null;
+  estimatedNextWeeklyResetAt: string | null;
+  cadencePressure: ResetCadencePressure;
+  rapidRepeatCount30d: number;
+  shortestIntervalHours: number | null;
+  latestIntervalHours: number | null;
+  explicitPostResetSignal: boolean;
+  cadenceSource: "public_reset_weekly_proxy";
+}
+
+export interface ResetAnalysisResult {
+  likelihood: ResetLikelihood;
+  reason?: string;
+  summary?: string;
+  keywords?: string[];
+  context: ResetAnalysisContext;
+  guardrail?: "no_post_reset_activity" | "recent_reset_cooldown" | "early_cycle_cap" | null;
+}
+
 export interface DashboardData {
   range: { days: number; start: string; end: string };
   stats: {
@@ -59,6 +87,7 @@ export interface DashboardData {
   daily: DailyRollup[];
   activities: Activity[];
   resetHistory: ResetEvent[];
+  resetContext: ResetAnalysisContext;
   source: string | null;
   fetchedAt: string | null;
   coverage: {

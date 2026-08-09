@@ -29,6 +29,7 @@ Tibo 的重置公告并不存在于一份整洁的官方日志里，它们散落
 - 保存 Tibo 回复或引用的对象，而不只统计他的独立发言。
 - 展示每日活动节奏和互动类型构成。
 - 使用 DeepSeek 分析 Codex / ChatGPT Work 重置信号。
+- 概率分析从最近一次已确认全局重置之后开始，不再反复使用完整 7 天信息。
 - 提供带有“已执行”和“传播中”状态的可核实重置历史。
 - 使用 Sites D1 幂等保存活动、重置事件和抓取健康记录。
 - FxTwitter API v2 作为主数据源，Nitter RSS 作为降级来源。
@@ -80,6 +81,18 @@ flowchart LR
 事件会按照执行状态（`completed` / `rolling_out`）、类型（`global` / `banked`）和覆盖对象分类。数据库预置了经过人工核实的历史证据，之后每次抓取的新活动也会自动经过同一套规则。
 
 OpenAI 的 Codex App Server 可以通过 `account/rateLimits/read` 返回已登录账户的当前使用比例、窗口时长、下一次常规重置时间以及可用的手动重置额度，但没有提供 Tibo 全局重置的公共历史接口。因此，本项目使用带原始链接的公开公告建立时间线。参见 [OpenAI 官方额度字段说明](https://learn.chatgpt.com/docs/app-server#6-rate-limits-chatgpt)。
+
+### 重置感知概率模型
+
+活动看板仍展示滚动 7 天数据，但概率模型改用动态证据窗口：
+
+1. 最近一次已确认的全局重置会关闭旧窗口；这条重置公告不能再作为“下一次重置”的证据。
+2. 只有发生在该时刻之后的发言、回复和引用才会进入语义分析。
+3. 以 7 天作为周额度窗口代理，让周期越接近时基线逐步升高。它会明确标注为估算，因为公开页面无法读取访问者账户级的 `resetsAt`。官方说明 Codex 使用共享的 5 小时窗口，并且可能存在额外周限制。
+4. 最近 24 小时内刚发生重置时，如果没有新的明确证据，会启用冷却并限制过高预测。
+5. 新出现的重置承诺、产品冲突、事故、庆祝或运营事件可以覆盖冷却；系统同时统计历史上间隔不超过 24 小时的全局重置，说明快速连续重置确实可能发生。
+
+分析结果会展示重置后的活动条数、周周期代理进度、短间隔历史次数，以及是否触发确定性防误判规则。参见 [OpenAI 官方 Codex 使用窗口说明](https://learn.chatgpt.com/docs/pricing#what-are-the-usage-limits-for-my-plan)。
 
 ## D1 数据模型
 
@@ -152,6 +165,13 @@ npm run db:generate
   "stats": { "total": 49, "originals": 7, "interactions": 42 },
   "daily": [],
   "activities": [],
+  "resetContext": {
+    "analysisWindowStart": "2026-08-08T20:29:22.000Z",
+    "postResetActivityCount": 6,
+    "weeklyProgressPercent": 7,
+    "rapidRepeatCount30d": 1,
+    "explicitPostResetSignal": true
+  },
   "resetHistory": [
     {
       "id": "2086188036493344823",
@@ -171,7 +191,7 @@ npm run db:generate
 app/                       React 页面、样式和 Worker API 路由
 db/                        D1 schema、存储、缓存和聚合
 drizzle/                   生成的 SQLite 迁移和快照
-lib/                       数据源适配、重置识别和共享类型
+lib/                       数据源适配、重置识别、重置感知分析和共享类型
 worker/                    Vinext Worker 入口
 public/                    运行时图片与社交分享图
 docs/images/               从线上页面截取的 README 图片

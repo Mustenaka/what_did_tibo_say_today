@@ -29,6 +29,7 @@ The probability card is intentionally playful and is not official OpenAI guidanc
 - Interaction-aware records that retain the account Tibo replied to or quoted.
 - Daily activity rhythm and interaction-mix visualizations.
 - DeepSeek-powered Codex / ChatGPT Work reset-signal analysis.
+- Reset-aware analysis that starts after the latest confirmed global reset instead of reusing the whole seven-day feed.
 - Verified reset history with `completed` and `rolling_out` states.
 - Durable Sites D1 storage with idempotent writes and fetch-run health records.
 - FxTwitter API v2 as the primary source, with Nitter RSS as a fallback.
@@ -80,6 +81,18 @@ An activity becomes a reset event only when all of the following are true:
 Events are classified by delivery (`completed` or `rolling_out`), type (`global` or `banked`), and audience scope. Curated historical evidence seeds the database, while newly fetched activities are checked automatically.
 
 OpenAI's Codex App Server can expose an authenticated account's current usage percentage, window duration, next scheduled reset timestamp, and available reset credits through `account/rateLimits/read`. It does **not** provide a public history of Tibo-triggered global resets, so this project uses source-linked public announcements for that timeline. See the [official rate-limit fields](https://learn.chatgpt.com/docs/app-server#6-rate-limits-chatgpt).
+
+### Reset-aware probability model
+
+The activity dashboard still shows a rolling seven-day view, but the probability model uses a dynamic evidence window:
+
+1. The latest confirmed global reset closes the previous window. Its announcement cannot be counted as evidence for the next reset.
+2. Only newer posts, replies, and quotes reach the semantic analysis.
+3. A seven-day weekly-window proxy adds gradual cadence pressure. It is explicitly an estimate because the public site cannot read a visitor's account-level `resetsAt` value. Official guidance describes a shared five-hour window and notes that additional weekly limits may apply.
+4. A reset within the last 24 hours normally activates a cooldown and caps unsupported high predictions.
+5. A new explicit reset promise, conflict, outage, celebration, or operational trigger can override that cooldown. Historical global-reset intervals of 24 hours or less are counted to show that rapid repeats are possible.
+
+The result includes the post-reset activity count, weekly proxy progress, short-interval precedent count, and any deterministic guardrail applied to the model output. See the [official Codex usage-window description](https://learn.chatgpt.com/docs/pricing#what-are-the-usage-limits-for-my-plan).
 
 ## Data model
 
@@ -152,6 +165,13 @@ Abbreviated dashboard response:
   "stats": { "total": 49, "originals": 7, "interactions": 42 },
   "daily": [],
   "activities": [],
+  "resetContext": {
+    "analysisWindowStart": "2026-08-08T20:29:22.000Z",
+    "postResetActivityCount": 6,
+    "weeklyProgressPercent": 7,
+    "rapidRepeatCount30d": 1,
+    "explicitPostResetSignal": true
+  },
   "resetHistory": [
     {
       "id": "2086188036493344823",
@@ -171,7 +191,7 @@ Abbreviated dashboard response:
 app/                       React page, styling, and Worker API routes
 db/                        D1 schema, storage, caching, and aggregation
 drizzle/                   Generated SQLite migrations and snapshots
-lib/                       Source adapters, reset detector, and shared types
+lib/                       Source adapters, reset detector, reset-aware analysis, and shared types
 worker/                    Vinext Worker entrypoint
 public/                    Runtime visual assets and social preview
 docs/images/               README screenshots captured from production

@@ -228,7 +228,7 @@ body::before {
 .mix-quote { background: var(--blue); }
 .mix-repost { background: var(--ink); }
 
-.analysis-column { position: sticky; top: 20px; display: grid; gap: 16px; }
+.analysis-column { display: grid; gap: 16px; }
 .analysis-card { overflow: hidden; border-radius: 24px; background: var(--ink); color: var(--paper); box-shadow: 0 18px 50px rgba(16,39,27,.12); }
 .analysis-header { display: flex; align-items: center; justify-content: space-between; padding: 28px 24px 20px; border-bottom: 1px solid rgba(244,240,230,.14); }
 .analysis-header p { color: var(--lime); }
@@ -252,6 +252,15 @@ body::before {
 .analysis-copy { margin-top: 22px; }
 .analysis-copy h3 { margin: 0 0 7px; color: rgba(244,240,230,.48); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
 .analysis-copy p, .analysis-state p { margin: 0; color: rgba(244,240,230,.7); font-size: 12px; line-height: 1.65; }
+.reset-context-panel { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(244,240,230,.14); }
+.reset-context-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.reset-context-heading > strong { color: rgba(244,240,230,.52); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; }
+.reset-context-heading > span { padding: 4px 7px; border-radius: 999px; background: var(--lime); color: var(--ink); font-size: 8px; font-weight: 900; }
+.reset-context-grid { display: grid; gap: 8px; }
+.reset-context-grid article { padding: 12px; border: 1px solid rgba(244,240,230,.11); border-radius: 12px; background: rgba(255,255,255,.035); }
+.reset-context-grid article > span { display: block; margin-bottom: 5px; color: rgba(244,240,230,.48); font-size: 9px; }
+.reset-context-grid article > strong { display: block; color: var(--lime); font-family: var(--serif); font-size: 24px; font-weight: 500; }
+.reset-context-grid article > small { display: block; margin-top: 4px; color: rgba(244,240,230,.52); font-size: 8px; line-height: 1.45; }
 .analysis-state { display: grid; gap: 16px; }
 .analysis-state strong { font-family: var(--serif); font-size: 26px; font-weight: 500; }
 .analysis-state button, .error-state button { width: fit-content; padding: 9px 14px; border: 0; border-radius: 999px; background: var(--lime); font-weight: 800; cursor: pointer; }
