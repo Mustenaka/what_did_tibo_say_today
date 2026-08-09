@@ -8,7 +8,7 @@ export async function GET() {
     const dashboard = await getRecentDashboard(7);
     const result = await getOrCreateResetAnalysis(dashboard);
     return Response.json(result, {
-      headers: { "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=900" },
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
     return Response.json({

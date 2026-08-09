@@ -50,6 +50,9 @@ test("the completed reset closes the old evidence window", () => {
   assert.deepEqual(filtered.map((item) => item.id), ["after"]);
   assert.equal(context.postResetActivityCount, 1);
   assert.equal(context.explicitPostResetSignal, true);
+  assert.equal(context.explicitPostResetSignalKind, "scheduled");
+  assert.equal(context.explicitPostResetSignalActivityId, "after");
+  assert.equal(context.explicitPostResetSignalActiveUntil, "2026-08-11T12:00:00.000Z");
 });
 
 test("the evidence window follows effective time when it differs from the announcement", () => {
@@ -104,6 +107,11 @@ test("a recent reset caps high predictions unless a new explicit signal exists",
     shortestIntervalHours: 11.9,
     latestIntervalHours: 72,
     explicitPostResetSignal: false,
+    explicitPostResetSignalKind: null,
+    explicitPostResetSignalActivityId: null,
+    explicitPostResetSignalText: null,
+    explicitPostResetSignalAt: null,
+    explicitPostResetSignalActiveUntil: null,
     cadenceSource: "public_reset_weekly_proxy",
   };
 
@@ -117,4 +125,52 @@ test("a recent reset caps high predictions unless a new explicit signal exists",
   assert.equal(cooled.guardrail, "recent_reset_cooldown");
   assert.equal(overridden.likelihood, "very_likely");
   assert.equal(overridden.guardrail, null);
+});
+
+test("a scheduled reset commitment deterministically overrides an unlikely model draft", () => {
+  const latest = reset("reset", "2026-08-08T20:29:22.000Z");
+  const activities = [
+    activity("promise", "2026-08-08T20:34:50.000Z", "I'll do another performative reset on Monday"),
+  ];
+  const context = buildResetAnalysisContext(activities, [latest], new Date("2026-08-10T08:00:00.000Z"));
+  const result = applyResetAwareGuard({ likelihood: "unlikely", reason: "The weekly cycle is early." }, context);
+
+  assert.equal(result.likelihood, "very_likely");
+  assert.equal(result.guardrail, "explicit_reset_commitment");
+  assert.match(result.reason || "", /explicitly committed/i);
+});
+
+test("an expired scheduled commitment no longer overrides the model", () => {
+  const latest = reset("reset", "2026-08-08T20:29:22.000Z");
+  const activities = [
+    activity("promise", "2026-08-08T20:34:50.000Z", "I'll do another performative reset on Monday"),
+  ];
+  const context = buildResetAnalysisContext(activities, [latest], new Date("2026-08-11T13:00:00.000Z"));
+  const result = applyResetAwareGuard({ likelihood: "unlikely", reason: "The promise window passed." }, context);
+
+  assert.equal(context.explicitPostResetSignal, false);
+  assert.equal(result.likelihood, "unlikely");
+  assert.equal(result.guardrail, null);
+});
+
+test("a direct promise without a date creates a likely floor", () => {
+  const latest = reset("reset", "2026-08-08T20:29:22.000Z");
+  const activities = [activity("promise", "2026-08-09T01:00:00.000Z", "I'll reset usage limits again")];
+  const context = buildResetAnalysisContext(activities, [latest], new Date("2026-08-09T08:00:00.000Z"));
+  const result = applyResetAwareGuard({ likelihood: "unlikely" }, context);
+
+  assert.equal(context.explicitPostResetSignalKind, "promise");
+  assert.equal(result.likelihood, "likely");
+  assert.equal(result.guardrail, "explicit_reset_promise");
+});
+
+test("an exploratory reset question is not promoted as a commitment", () => {
+  const latest = reset("reset", "2026-08-08T20:29:22.000Z");
+  const activities = [activity("question", "2026-08-09T01:00:00.000Z", "Should we reset Codex again?")];
+  const context = buildResetAnalysisContext(activities, [latest], new Date("2026-08-09T08:00:00.000Z"));
+  const result = applyResetAwareGuard({ likelihood: "unlikely" }, context);
+
+  assert.equal(context.explicitPostResetSignalKind, "considering");
+  assert.equal(result.likelihood, "unlikely");
+  assert.equal(result.guardrail, null);
 });

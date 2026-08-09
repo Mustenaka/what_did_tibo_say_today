@@ -53,6 +53,7 @@ export interface ResetEvent {
 
 export type ResetCadencePressure = "low" | "rising" | "high" | "due" | "unknown";
 export type ResetLikelihood = "very_likely" | "likely" | "unlikely" | "none" | "unknown";
+export type ExplicitResetSignalKind = "scheduled" | "promise" | "considering";
 
 export interface ResetAnalysisContext {
   analysisWindowStart: string | null;
@@ -67,6 +68,11 @@ export interface ResetAnalysisContext {
   shortestIntervalHours: number | null;
   latestIntervalHours: number | null;
   explicitPostResetSignal: boolean;
+  explicitPostResetSignalKind: ExplicitResetSignalKind | null;
+  explicitPostResetSignalActivityId: string | null;
+  explicitPostResetSignalText: string | null;
+  explicitPostResetSignalAt: string | null;
+  explicitPostResetSignalActiveUntil: string | null;
   cadenceSource: "public_reset_weekly_proxy";
 }
 
@@ -76,7 +82,7 @@ export interface ResetAnalysisResult {
   summary?: string;
   keywords?: string[];
   context: ResetAnalysisContext;
-  guardrail?: "no_post_reset_activity" | "recent_reset_cooldown" | "early_cycle_cap" | null;
+  guardrail?: "no_post_reset_activity" | "recent_reset_cooldown" | "early_cycle_cap" | "explicit_reset_commitment" | "explicit_reset_promise" | null;
   snapshot?: {
     id: string;
     generatedAt: string;

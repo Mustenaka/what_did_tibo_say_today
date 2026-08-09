@@ -9,7 +9,7 @@ import type {
   ResetLikelihood,
 } from "./types";
 
-export const ANALYSIS_PROMPT_VERSION = "reset-aware-v3";
+export const ANALYSIS_PROMPT_VERSION = "reset-aware-v4";
 export const ANALYSIS_MODEL = "deepseek-chat";
 
 const SYSTEM_PROMPT = `You evaluate whether Tibo may trigger another discretionary Codex or ChatGPT Work usage-limit reset.
@@ -22,6 +22,7 @@ Non-negotiable reasoning rules:
 5. A reset less than 24 hours ago normally lowers the baseline. A new explicit reset promise, product conflict, outage, celebration, or operational event can override that cooldown.
 6. Replies and quotes matter. A confrontation involving another coding-product leader can be a trigger when the text connects it to reset behavior.
 7. Rapid-repeat history makes a fast repeat plausible but is never standalone proof.
+8. explicitPostResetSignalKind distinguishes discussion from intent: "scheduled" is a direct time-bound commitment, "promise" is direct intent without a named time, and "considering" is only exploratory.
 
 Return ONLY valid JSON in this exact format:
 {"likelihood":"very_likely|likely|unlikely|none","reason":"...","keywords":["..."],"summary":"..."}`;
@@ -66,6 +67,9 @@ async function buildSnapshotId(dashboard: DashboardData) {
     promptVersion: ANALYSIS_PROMPT_VERSION,
     latestResetId: latestReset?.id || dashboard.resetContext.lastResetAt,
     cadencePressure: dashboard.resetContext.cadencePressure,
+    explicitSignalKind: dashboard.resetContext.explicitPostResetSignalKind,
+    explicitSignalActive: dashboard.resetContext.explicitPostResetSignal,
+    explicitSignalActiveUntil: dashboard.resetContext.explicitPostResetSignalActiveUntil,
     activities: activities.map((activity) => ({
       id: activity.id,
       publishedAt: activity.publishedAt,
