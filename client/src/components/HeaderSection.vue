@@ -1,15 +1,16 @@
 <template>
-  <header class="header">
-    <div class="header-left">
-      <img class="header-avatar" src="/tibo.png" alt="Tibo" />
-      <div class="header-text">
-        <h1 class="header-title">{{ $t('appTitle') }}</h1>
-        <p class="header-subtitle">{{ $t('tiboTitle') }}</p>
-      </div>
+  <header class="site-header">
+    <a class="brand" href="#main-content" :aria-label="$t('appTitle')">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span>TIBO / SIGNAL DESK</span>
+    </a>
+
+    <div class="header-actions">
+      <span class="live-pill"><span aria-hidden="true"></span>{{ $t('rollingWindow') }}</span>
+      <button class="language-button" :aria-label="$t('languageLabel')" @click="toggleLang">
+        {{ $t('switchLang') }}
+      </button>
     </div>
-    <button class="lang-btn" @click="toggleLang">
-      {{ $t('switchLang') }}
-    </button>
   </header>
 </template>
 
@@ -20,70 +21,94 @@ const { locale } = useI18n();
 
 function toggleLang() {
   locale.value = locale.value === 'zh-CN' ? 'en' : 'zh-CN';
+  document.documentElement.lang = locale.value;
 }
 </script>
 
 <style scoped>
-.header {
+.site-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  margin-bottom: 24px;
-  flex-wrap: wrap;
   gap: 16px;
+  min-height: 80px;
 }
 
-.header-left {
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-decoration: none;
+}
+
+.brand-dot {
+  width: 11px;
+  height: 11px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: var(--signal);
+}
+
+.header-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
 }
 
-.header-avatar {
-  width: 56px;
-  height: 56px;
+.live-pill,
+.language-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.live-pill {
+  gap: 7px;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 253, 247, 0.6);
+  color: var(--ink-soft);
+}
+
+.live-pill span {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #e5e7eb;
+  background: #36a35f;
+  box-shadow: 0 0 0 4px rgba(54, 163, 95, 0.13);
 }
 
-.header-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.header-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #111827;
-  margin: 0;
-  line-height: 1.3;
-}
-
-.header-subtitle {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin: 2px 0 0;
-}
-
-.lang-btn {
-  padding: 8px 20px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #fff;
-  color: #374151;
-  font-size: 0.875rem;
+.language-button {
+  padding: 9px 16px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: white;
   cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
 }
 
-.lang-btn:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+.language-button:hover {
+  background: var(--signal);
+  border-color: var(--signal);
+}
+
+@media (max-width: 560px) {
+  .site-header {
+    min-height: 68px;
+  }
+
+  .live-pill {
+    display: none;
+  }
+
+  .brand {
+    font-size: 0.66rem;
+  }
 }
 </style>

@@ -1,26 +1,52 @@
 <template>
-  <div class="tweet-card card">
-    <div class="tweet-header">
-      <span class="tweet-index">#{{ index }}</span>
-      <a v-if="tweet.link" class="tweet-link" :href="tweet.link" target="_blank" rel="noopener">
-        &nearr;
+  <article class="activity-card card-surface" :class="`activity-${tweet.type}`">
+    <div class="activity-marker" aria-hidden="true">{{ marker }}</div>
+
+    <div class="activity-body">
+      <div class="activity-meta">
+        <span class="type-label">{{ $t(`activityType.${tweet.type}`) }}</span>
+        <span v-if="tweet.targetHandle" class="target-handle">@{{ tweet.targetHandle }}</span>
+        <time :datetime="tweet.publishedAt">{{ formatDate(tweet.publishedAt) }}</time>
+      </div>
+
+      <p class="activity-text">{{ tweet.text || $t('mediaOnly') }}</p>
+
+      <a
+        v-if="tweet.link"
+        class="activity-link"
+        :href="tweet.link"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <span>{{ $t('viewOnX') }}</span>
+        <b aria-hidden="true">↗</b>
       </a>
     </div>
-    <p class="tweet-text">{{ tweet.text }}</p>
-    <time v-if="tweet.time" class="tweet-time">{{ formatTime(tweet.time) }}</time>
-  </div>
+  </article>
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const props = defineProps({
   tweet: { type: Object, required: true },
-  index: { type: Number, required: true },
 });
 
-function formatTime(timeStr) {
+const { locale } = useI18n();
+
+const marker = computed(() => ({
+  original: 'T',
+  reply: '↩',
+  quote: '“',
+  repost: '↻',
+}[props.tweet.type] || '·'));
+
+function formatDate(value) {
   try {
-    const d = new Date(timeStr);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Intl.DateTimeFormat(locale.value, {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    }).format(new Date(value));
   } catch {
     return '';
   }
@@ -28,47 +54,121 @@ function formatTime(timeStr) {
 </script>
 
 <style scoped>
-.tweet-card {
+.activity-card {
   position: relative;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 18px;
+  padding: 22px;
+  box-shadow: none;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
-.tweet-header {
+.activity-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(19, 34, 25, 0.28);
+  box-shadow: 0 14px 36px rgba(19, 34, 25, 0.08);
+}
+
+.activity-marker {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: white;
+  font-family: Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.activity-reply .activity-marker { background: var(--signal); }
+.activity-quote .activity-marker { background: #5c7fa3; }
+.activity-repost .activity-marker { background: #57a178; }
+
+.activity-body {
+  min-width: 0;
+}
+
+.activity-meta {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  gap: 8px;
+  min-height: 24px;
+  color: var(--muted);
+  font-size: 0.68rem;
 }
 
-.tweet-index {
-  font-size: 0.75rem;
-  color: #9ca3af;
-  font-weight: 600;
+.type-label {
+  color: var(--ink);
+  font-weight: 850;
 }
 
-.tweet-link {
-  font-size: 0.875rem;
-  color: #6366f1;
-  text-decoration: none;
-  font-weight: 600;
+.target-handle {
+  max-width: 150px;
+  overflow: hidden;
+  color: var(--signal-dark);
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.tweet-link:hover {
-  text-decoration: underline;
+.activity-meta time {
+  margin-left: auto;
+  white-space: nowrap;
 }
 
-.tweet-text {
-  font-size: 0.9375rem;
-  color: #1f2937;
-  line-height: 1.6;
-  margin: 0;
+.activity-text {
+  margin: 12px 0 16px;
+  color: var(--ink-soft);
+  font-family: Georgia, "Noto Serif SC", serif;
+  font-size: clamp(1rem, 2vw, 1.16rem);
+  line-height: 1.58;
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
-  word-break: break-word;
 }
 
-.tweet-time {
-  display: block;
-  margin-top: 10px;
-  font-size: 0.75rem;
-  color: #9ca3af;
+.activity-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  color: var(--ink);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.activity-link:hover span {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.activity-link b {
+  color: var(--signal);
+}
+
+@media (max-width: 520px) {
+  .activity-card {
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 12px;
+    padding: 18px 16px;
+  }
+
+  .activity-marker {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+  }
+
+  .activity-meta {
+    flex-wrap: wrap;
+  }
+
+  .activity-meta time {
+    width: 100%;
+    margin-left: 0;
+  }
 }
 </style>

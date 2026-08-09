@@ -1,7 +1,7 @@
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com';
 
-const SYSTEM_PROMPT = `You are an analysis tool that evaluates tweets from Tibo, the OpenAI Chief Reset Officer.
+const SYSTEM_PROMPT = `You are an analysis tool that evaluates public posts and interactions from Tibo, the OpenAI Chief Reset Officer.
 
 Focus on keywords and concepts: reset, "there will be signs", celebrate, ship, again.
 
@@ -11,7 +11,9 @@ Return ONLY valid JSON in this exact format (no markdown, no extra text):
 {"likelihood":"very_likely|likely|unlikely|none","reason":"...","keywords":["..."],"summary":"..."}`;
 
 export async function analyzeResetLikelihood(tweets) {
-  const tweetTexts = tweets.map((t, i) => `[${i + 1}] ${t.text}`).join('\n\n');
+  const tweetTexts = tweets
+    .map((tweet, index) => `[${index + 1}] (${tweet.type || 'post'}) ${tweet.text}`)
+    .join('\n\n');
 
   const response = await fetch(`${DEEPSEEK_BASE_URL}/v1/chat/completions`, {
     method: 'POST',
@@ -23,7 +25,7 @@ export async function analyzeResetLikelihood(tweets) {
       model: 'deepseek-chat',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `Analyze these tweets from Tibo today for any signs of an upcoming reset:\n\n${tweetTexts}` },
+        { role: 'user', content: `Analyze these posts and interactions from Tibo over the past 7 days for any signs of an upcoming reset:\n\n${tweetTexts}` },
       ],
       temperature: 0.3,
       max_tokens: 500,
