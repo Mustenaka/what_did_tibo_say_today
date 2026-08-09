@@ -95,6 +95,7 @@ const copy = {
     storageStale: (count: number) => `本次刷新失败，正在展示 D1 中已有的 ${count} 条历史活动。`,
     footer: "活动数据由 FxTwitter 提供，Nitter 降级 · D1 保存 · DeepSeek 分析",
     lastUpdated: "最后刷新",
+    githubRepository: "项目源代码",
     loading: "正在接收公开信号",
     likelihood: {
       very_likely: "极有可能",
@@ -194,6 +195,7 @@ const copy = {
     storageStale: (count: number) => `This refresh failed; showing ${count} activities already stored in D1.`,
     footer: "Activity via FxTwitter, Nitter fallback · Stored in D1 · Analysis by DeepSeek",
     lastUpdated: "Last refreshed",
+    githubRepository: "Project source",
     loading: "Receiving public signals",
     likelihood: {
       very_likely: "Very likely",
@@ -526,7 +528,23 @@ export function TiboDashboard() {
               </aside>
             </div>
           </main>
-          <footer className="site-footer"><span>{t.footer}</span>{dashboard?.fetchedAt && <span>{t.lastUpdated} {formatDate(dashboard.fetchedAt)}</span>}</footer>
+          <footer className="site-footer">
+            <div className="footer-copy">
+              <span>{t.footer}</span>
+              {dashboard?.fetchedAt && <span>{t.lastUpdated} {formatDate(dashboard.fetchedAt)}</span>}
+            </div>
+            <a
+              className="github-link"
+              href="https://github.com/Mustenaka/what_did_tibo_say_today"
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`${t.githubRepository}: https://github.com/Mustenaka/what_did_tibo_say_today`}
+            >
+              <span>{t.githubRepository}</span>
+              <strong>github.com/Mustenaka/what_did_tibo_say_today</strong>
+              <b aria-hidden="true">↗</b>
+            </a>
+          </footer>
         </div>
       </div>
     </>
