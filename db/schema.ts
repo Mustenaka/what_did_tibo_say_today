@@ -25,3 +25,17 @@ export const fetchRuns = sqliteTable("fetch_runs", {
   succeeded: integer("succeeded", { mode: "boolean" }).notNull().default(true),
   error: text("error"),
 }, (table) => [index("idx_fetch_runs_status_time").on(table.succeeded, table.fetchedAt)]);
+
+export const resetEvents = sqliteTable("reset_events", {
+  id: text("id").primaryKey(),
+  announcedAt: text("announced_at").notNull(),
+  day: text("day").notNull(),
+  kind: text("kind", { enum: ["global", "banked"] }).notNull(),
+  status: text("status", { enum: ["completed", "rolling_out"] }).notNull(),
+  scope: text("scope", { enum: ["paid_codex_chatgpt_work", "all_codex", "targeted"] }).notNull(),
+  evidenceText: text("evidence_text").notNull(),
+  evidenceUrl: text("evidence_url").notNull(),
+  source: text("source").notNull(),
+  discoveredAt: text("discovered_at").notNull(),
+  activityId: text("activity_id"),
+}, (table) => [index("idx_reset_events_announced_at").on(table.announcedAt)]);

@@ -58,6 +58,15 @@ const copy = {
     reason: "分析依据",
     summary: "信号摘要",
     disclaimer: "娱乐性信号判断，不代表 OpenAI 官方信息",
+    resetHistoryKicker: "已核实事件",
+    resetHistoryTitle: "重置历史",
+    resetHistoryNote: "只收录 Tibo 明确宣布已执行或正在传播的额度重置；预告、玩笑和个人猜测不计入。",
+    resetHistoryCount: (count: number) => `最近 ${count} 条`,
+    resetHistoryEmpty: "尚未找到可核实的重置公告。",
+    resetSource: "查看原始公告",
+    resetKinds: { global: "全局额度重置", banked: "可储存重置" },
+    resetStatuses: { completed: "已执行", rolling_out: "传播中" },
+    resetScopes: { paid_codex_chatgpt_work: "Codex + ChatGPT Work 付费用户", all_codex: "Codex 用户", targeted: "指定用户" },
     retry: "重试",
     dataError: "暂时无法获取公开活动，D1 中也没有可展示的历史记录。",
     structured: "结构化历史",
@@ -123,6 +132,15 @@ const copy = {
     reason: "Reasoning",
     summary: "Signal summary",
     disclaimer: "An entertainment signal check, not official OpenAI information",
+    resetHistoryKicker: "VERIFIED EVENTS",
+    resetHistoryTitle: "Reset history",
+    resetHistoryNote: "Only explicit announcements that a reset was completed or propagating are included. Teasers, jokes, and guesses are excluded.",
+    resetHistoryCount: (count: number) => `${count} latest`,
+    resetHistoryEmpty: "No verifiable reset announcements yet.",
+    resetSource: "Open source post",
+    resetKinds: { global: "Usage-limit reset", banked: "Banked reset" },
+    resetStatuses: { completed: "Completed", rolling_out: "Rolling out" },
+    resetScopes: { paid_codex_chatgpt_work: "Paid Codex + ChatGPT Work", all_codex: "Codex users", targeted: "Selected users" },
     retry: "Retry",
     dataError: "Public activity sources are unavailable and D1 has no history to display yet.",
     structured: "Structured history",
@@ -373,6 +391,29 @@ export function TiboDashboard() {
                       : <div className="analysis-state"><strong>{t.waiting}</strong></div>}
                   </div>
                   <p className="analysis-disclaimer">{t.disclaimer}</p>
+                </section>
+                <section className="reset-history-card card-surface" aria-labelledby="reset-history-title">
+                  <div className="reset-history-header">
+                    <div><p>{t.resetHistoryKicker}</p><h2 id="reset-history-title">{t.resetHistoryTitle}</h2></div>
+                    <span>{t.resetHistoryCount(dashboard?.resetHistory.length || 0)}</span>
+                  </div>
+                  <p className="reset-history-note">{t.resetHistoryNote}</p>
+                  {dashboard?.resetHistory.length ? (
+                    <ol className="reset-history-list">
+                      {dashboard.resetHistory.map((reset) => (
+                        <li key={reset.id}>
+                          <div className="reset-event-topline">
+                            <time dateTime={reset.announcedAt}>{formatDate(reset.announcedAt)}</time>
+                            <span className={`reset-status reset-status-${reset.status}`}>{t.resetStatuses[reset.status]}</span>
+                          </div>
+                          <strong>{t.resetKinds[reset.kind]}</strong>
+                          <small>{t.resetScopes[reset.scope]}</small>
+                          <p>{reset.evidenceText}</p>
+                          <a href={reset.evidenceUrl} target="_blank" rel="noreferrer">{t.resetSource}<b aria-hidden="true">↗</b></a>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : <div className="reset-history-empty">{dataLoading ? t.loading : t.resetHistoryEmpty}</div>}
                 </section>
                 <div className="data-note card-surface"><span>DB</span><div><h3>{t.structured}</h3><p>{storageNote}</p></div></div>
               </aside>

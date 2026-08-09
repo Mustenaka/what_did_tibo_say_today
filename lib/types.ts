@@ -30,6 +30,22 @@ export interface DailyRollup {
   repost: number;
 }
 
+export type ResetEventStatus = "completed" | "rolling_out";
+export type ResetEventKind = "global" | "banked";
+export type ResetEventScope = "paid_codex_chatgpt_work" | "all_codex" | "targeted";
+
+export interface ResetEvent {
+  id: string;
+  announcedAt: string;
+  day: string;
+  kind: ResetEventKind;
+  status: ResetEventStatus;
+  scope: ResetEventScope;
+  evidenceText: string;
+  evidenceUrl: string;
+  source: string;
+}
+
 export interface DashboardData {
   range: { days: number; start: string; end: string };
   stats: {
@@ -42,6 +58,7 @@ export interface DashboardData {
   };
   daily: DailyRollup[];
   activities: Activity[];
+  resetHistory: ResetEvent[];
   source: string | null;
   fetchedAt: string | null;
   coverage: {

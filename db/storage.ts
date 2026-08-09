@@ -1,7 +1,8 @@
 import { getD1 } from ".";
 import { fetchRecentActivities } from "../lib/activity-source";
 import { getRuntimeEnv } from "../lib/runtime-env";
-import type { Activity, DashboardData, DailyRollup, SourceResult } from "../lib/types";
+import { CURATED_RESET_EVENTS, resetEventFromActivity } from "../lib/reset-history";
+import type { Activity, DashboardData, DailyRollup, ResetEvent, SourceResult } from "../lib/types";
 
 const ACTIVITY_TYPES = new Set(["original", "reply", "quote", "repost"]);
 let schemaReady: Promise<void> | null = null;
@@ -41,10 +42,44 @@ export function ensureDatabase() {
           error TEXT
         )
       `),
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS reset_events (
+          id TEXT PRIMARY KEY,
+          announced_at TEXT NOT NULL,
+          day TEXT NOT NULL,
+          kind TEXT NOT NULL CHECK (kind IN ('global', 'banked')),
+          status TEXT NOT NULL CHECK (status IN ('completed', 'rolling_out')),
+          scope TEXT NOT NULL CHECK (scope IN ('paid_codex_chatgpt_work', 'all_codex', 'targeted')),
+          evidence_text TEXT NOT NULL,
+          evidence_url TEXT NOT NULL,
+          source TEXT NOT NULL,
+          discovered_at TEXT NOT NULL,
+          activity_id TEXT
+        )
+      `),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_activities_published_at ON activities(published_at)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_activities_day_type ON activities(day, type)"),
       db.prepare("CREATE INDEX IF NOT EXISTS idx_fetch_runs_status_time ON fetch_runs(succeeded, fetched_at)"),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_reset_events_announced_at ON reset_events(announced_at)"),
     ]);
+    await db.batch(CURATED_RESET_EVENTS.map((reset) => db.prepare(`
+      INSERT OR IGNORE INTO reset_events (
+        id, announced_at, day, kind, status, scope, evidence_text, evidence_url,
+        source, discovered_at, activity_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      reset.id,
+      reset.announcedAt,
+      reset.day,
+      reset.kind,
+      reset.status,
+      reset.scope,
+      reset.evidenceText,
+      reset.evidenceUrl,
+      reset.source,
+      reset.discoveredAt,
+      reset.activityId,
+    )));
   })();
   return schemaReady;
 }
@@ -87,6 +122,39 @@ async function saveFetch(result: SourceResult) {
   for (let index = 0; index < statements.length; index += 75) {
     await db.batch(statements.slice(index, index + 75));
   }
+  const resetStatements = result.activities
+    .map((activity) => resetEventFromActivity(activity, result.fetchedAt))
+    .filter((reset): reset is NonNullable<typeof reset> => Boolean(reset))
+    .map((reset) => db.prepare(`
+      INSERT INTO reset_events (
+        id, announced_at, day, kind, status, scope, evidence_text, evidence_url,
+        source, discovered_at, activity_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        announced_at = excluded.announced_at,
+        day = excluded.day,
+        kind = excluded.kind,
+        status = excluded.status,
+        scope = excluded.scope,
+        evidence_text = excluded.evidence_text,
+        evidence_url = excluded.evidence_url,
+        source = excluded.source,
+        discovered_at = excluded.discovered_at,
+        activity_id = excluded.activity_id
+    `).bind(
+      reset.id,
+      reset.announcedAt,
+      reset.day,
+      reset.kind,
+      reset.status,
+      reset.scope,
+      reset.evidenceText,
+      reset.evidenceUrl,
+      reset.source,
+      reset.discoveredAt,
+      reset.activityId,
+    ));
+  if (resetStatements.length) await db.batch(resetStatements);
   await db.batch([
     db.prepare(`
       INSERT INTO fetch_runs (source, fetched_at, item_count, succeeded, error)
@@ -152,6 +220,20 @@ function activityFromRow(row: Record<string, unknown>): Activity {
   };
 }
 
+function resetEventFromRow(row: Record<string, unknown>): ResetEvent {
+  return {
+    id: String(row.id),
+    announcedAt: String(row.announced_at),
+    day: String(row.day),
+    kind: String(row.kind) as ResetEvent["kind"],
+    status: String(row.status) as ResetEvent["status"],
+    scope: String(row.scope) as ResetEvent["scope"],
+    evidenceText: String(row.evidence_text || ""),
+    evidenceUrl: String(row.evidence_url || ""),
+    source: String(row.source || "tibo_x"),
+  };
+}
+
 export async function getRecentDashboard(days = 7, now = new Date()): Promise<DashboardData> {
   await ensureDatabase();
   const safeDays = Math.min(30, Math.max(1, Number.parseInt(String(days), 10) || 7));
@@ -185,7 +267,7 @@ export async function getRecentDashboard(days = 7, now = new Date()): Promise<Da
     if (activity.type === "repost") stats.reposts += 1;
   }
 
-  const [latestAttempt, latestSuccess, coverage] = await Promise.all([
+  const [latestAttempt, latestSuccess, coverage, resetRows] = await Promise.all([
     db.prepare("SELECT source, fetched_at AS fetchedAt, succeeded, error FROM fetch_runs ORDER BY id DESC LIMIT 1")
       .first<{ source: string; fetchedAt: string; succeeded: number; error: string | null }>(),
     db.prepare("SELECT source, fetched_at AS fetchedAt FROM fetch_runs WHERE succeeded = 1 ORDER BY id DESC LIMIT 1")
@@ -194,6 +276,12 @@ export async function getRecentDashboard(days = 7, now = new Date()): Promise<Da
       SELECT MIN(day) AS oldestDay, MAX(day) AS newestDay, COUNT(*) AS storedCount
       FROM activities
     `).first<{ oldestDay: string | null; newestDay: string | null; storedCount: number }>(),
+    db.prepare(`
+      SELECT id, announced_at, day, kind, status, scope, evidence_text, evidence_url, source
+      FROM reset_events
+      ORDER BY announced_at DESC
+      LIMIT 8
+    `).all<Record<string, unknown>>(),
   ]);
 
   return {
@@ -201,6 +289,7 @@ export async function getRecentDashboard(days = 7, now = new Date()): Promise<Da
     stats,
     daily: [...daily.values()],
     activities,
+    resetHistory: (resetRows.results || []).map(resetEventFromRow),
     source: latestSuccess?.source || null,
     fetchedAt: latestSuccess?.fetchedAt || null,
     coverage: {
