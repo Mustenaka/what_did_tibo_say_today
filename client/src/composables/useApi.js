@@ -1,21 +1,25 @@
 const API_BASE = '/api';
 
+async function parseResponse(response) {
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+  return payload;
+}
+
 export function useApi() {
-  async function fetchTodayTweets() {
-    const res = await fetch(`${API_BASE}/tweets/today`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+  async function fetchRecentActivities() {
+    const response = await fetch(`${API_BASE}/activities/recent`);
+    return parseResponse(response);
   }
 
   async function analyzeTweets(tweets) {
-    const res = await fetch(`${API_BASE}/tweets/analyze`, {
+    const response = await fetch(`${API_BASE}/tweets/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tweets }),
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    return parseResponse(response);
   }
 
-  return { fetchTodayTweets, analyzeTweets };
+  return { fetchRecentActivities, analyzeTweets };
 }

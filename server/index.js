@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.json({ message: 'Tibo API server running. Use /api/tweets/today or /api/tweets/analyze' });
+  res.json({ message: 'Tibo API server running. Use /api/activities/recent or /api/tweets/analyze' });
 });
 
 app.use('/api', apiRouter);
